@@ -27,9 +27,9 @@ namespace KbAis.OperatorNetAudioClient.Features.NetAudioClient {
                 DeviceNumber = 0, BufferMilliseconds = 50, WaveFormat = codec.RecordFormat
             };
 
-            waveIn.DataAvailable += async (s, e) => {
+            waveIn.DataAvailable += (s, e) => {
                 var encodedSample = codec.Encode(e.Buffer, 0, e.BytesRecorded);
-                await udpClient.SendAsync(encodedSample, encodedSample.Length);
+                udpClient.Send(encodedSample, encodedSample.Length);
             };
             waveIn.StartRecording();
         }

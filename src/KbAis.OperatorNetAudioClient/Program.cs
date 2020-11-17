@@ -35,9 +35,12 @@ namespace KbAis.OperatorNetAudioClient {
         }
 
         [Command("client")]
-        public async Task StartClientAsync() {
+        public async Task StartClientAsync(
+            [Option("a")] string address,
+            [Option("p")] int port
+        ) {
             var cts = new CancellationTokenSource();
-            var client = new UdpAudioClient(new IPEndPoint(IPAddress.Loopback, 8080));
+            var client = new UdpAudioClient(new IPEndPoint(IPAddress.Parse(address), port));
             client.StartRecording();
             _ = client.StartPlayAsync(cts.Token);
             
