@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using ConsoleAppFramework;
+using KbAis.OperatorNetAudioClient.Features.NetAudioClient;
 using KbAis.OperatorNetAudioClient.Features.Server;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Primitives;
 using NAudio.Wave;
 
 namespace KbAis.OperatorNetAudioClient {
@@ -33,8 +36,13 @@ namespace KbAis.OperatorNetAudioClient {
 
         [Command("client")]
         public async Task StartClientAsync() {
-            var foo = WaveIn.DeviceCount;
-            Console.Write(foo);
+            var cts = new CancellationTokenSource();
+            var client = new UdpAudioClient(new IPEndPoint(IPAddress.Loopback, 8080));
+            client.StartRecording();
+            _ = client.StartPlayAsync(cts.Token);
+            
+            Console.WriteLine("Press any key to shutdown...");
+            Console.ReadKey();
         }
     }
 }

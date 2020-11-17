@@ -13,13 +13,13 @@ namespace KbAis.OperatorNetAudioClient.Features.Server {
         private readonly UdpTransmitterNode nodeB;
 
         public TunnelController(
-            IPEndPoint firstEndPoint,
-            IPEndPoint secondEndPoint,
+            IPEndPoint endPointA,
+            IPEndPoint endPointB,
             int bufferSize
         ) {
             cancellationTokenSource = new CancellationTokenSource();
-            nodeA = new UdpTransmitterNode(firstEndPoint, bufferSize);
-            nodeB = new UdpTransmitterNode(secondEndPoint, bufferSize);
+            nodeA = new UdpTransmitterNode(endPointA, bufferSize);
+            nodeB = new UdpTransmitterNode(endPointB, bufferSize);
 
             nodeA.LinkNode(nodeB);
             nodeB.LinkNode(nodeA);
