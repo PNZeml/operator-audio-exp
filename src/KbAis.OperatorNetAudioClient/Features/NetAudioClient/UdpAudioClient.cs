@@ -11,6 +11,8 @@ namespace KbAis.OperatorNetAudioClient.Features.NetAudioClient {
     public class UdpAudioClient : IAudioClient, IDisposable {
         private readonly UdpClient udpClient;
         private readonly ICodec codec;
+        private IWaveIn waveIn;
+        private IWavePlayer waveOut;
 
         public UdpAudioClient(IPEndPoint serverEndPoint) {
             udpClient = new UdpClient();
@@ -21,7 +23,7 @@ namespace KbAis.OperatorNetAudioClient.Features.NetAudioClient {
         }
 
         public void StartSending() {
-            using var waveIn = new WaveInEvent {
+            waveIn = new WaveInEvent {
                 DeviceNumber = 0,
                 BufferMilliseconds = 100,
                 WaveFormat = codec.RecordFormat
@@ -35,7 +37,7 @@ namespace KbAis.OperatorNetAudioClient.Features.NetAudioClient {
 
         public async Task StartPlayingAsync(CancellationToken cancellationToken) {
             try {
-                using var waveOut = new WasapiOut();
+                waveOut = new WasapiOut();
                 var waveProvider = new BufferedWaveProvider(codec.RecordFormat) {
                     DiscardOnBufferOverflow = true
                 };
@@ -59,7 +61,10 @@ namespace KbAis.OperatorNetAudioClient.Features.NetAudioClient {
             }
         }
 
-        public void Dispose() =>
+        public void Dispose() {
             udpClient?.Close();
+            waveIn?.Dispose();
+            waveOut?.Dispose();
+        }
     }
 }
