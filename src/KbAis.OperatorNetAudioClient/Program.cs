@@ -6,8 +6,6 @@ using ConsoleAppFramework;
 using KbAis.OperatorNetAudioClient.Features.NetAudioClient;
 using KbAis.OperatorNetAudioClient.Features.Server;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Primitives;
-using NAudio.Wave;
 
 namespace KbAis.OperatorNetAudioClient {
     internal class Program : ConsoleAppBase {
@@ -35,7 +33,7 @@ namespace KbAis.OperatorNetAudioClient {
             return Task.CompletedTask;
         }
 
-        [Command("client-player")]
+        [Command("client-sender")]
         public Task StartClientSenderAsync(
             [Option(null)] string serverAddress,
             [Option(null)] int serverPort
