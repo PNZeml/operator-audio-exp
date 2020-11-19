@@ -10,13 +10,13 @@ namespace KbAis.OperatorNetAudioClient.Utils.Codecs.Speex {
         private readonly IEncoder encoder;
 
         public SpeexNarrowbandCodec() {
-            const int SAMPLE_RATE_KHZ = 8;
+            const int SAMPLE_RATE_KHZ = 32;
             const int BITS_PER_SAMPLE = 16;
             const int CHANNELS = 1;
 
             recordFormat = new WaveFormat(SAMPLE_RATE_KHZ * 1000, BITS_PER_SAMPLE, CHANNELS);
-            decoder = new SpeexDefaultDecoder(SAMPLE_RATE_KHZ, BandMode.Narrow);
-            encoder = new SpeexDefaultEncoder(recordFormat.AverageBytesPerSecond, BandMode.Narrow);
+            decoder = new SpeexDefaultDecoder(SAMPLE_RATE_KHZ, BandMode.UltraWide);
+            encoder = new SpeexDefaultEncoder(recordFormat.AverageBytesPerSecond, BandMode.UltraWide);
         }
 
         public byte[] Decode(byte[] sample, int offset, int length) =>

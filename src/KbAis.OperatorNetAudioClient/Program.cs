@@ -15,37 +15,57 @@ namespace KbAis.OperatorNetAudioClient {
             Host.CreateDefaultBuilder().RunConsoleAppFrameworkAsync<Program>(args);
 
         [Command("server")]
-        public async Task StartServerAsync(
-            [Option("a")] int portA,
-            [Option("b")] int portB,
-            [Option("s")] int bufferSize = 1024
+        public Task StartServerAsync(
+            [Option(null)] string serverAddress,
+            [Option(null)] int portA,
+            [Option(null)] int portB,
+            [Option(null)] int bufferSize = 4096
         ) {
-            var controller = new TunnelController(
-                new IPEndPoint(IPAddress.Loopback, portA),
-                new IPEndPoint(IPAddress.Loopback, portB),
+            using var controller = new TunnelController(
+                new IPEndPoint(IPAddress.Parse(serverAddress), portA),
+                new IPEndPoint(IPAddress.Parse(serverAddress), portB),
                 bufferSize
             );
 
-            await controller.StartAsync();
+            _ = controller.StartAsync();
 
             Console.WriteLine("Press any key to shutdown...");
             Console.ReadKey();
 
-            controller.Dispose();
+            return Task.CompletedTask;
         }
 
-        [Command("client")]
-        public async Task StartClientAsync(
-            [Option("a")] string address,
-            [Option("p")] int port
+        [Command("client-player")]
+        public Task StartClientSenderAsync(
+            [Option(null)] string serverAddress,
+            [Option(null)] int serverPort
         ) {
-            var cts = new CancellationTokenSource();
-            var client = new UdpAudioClient(new IPEndPoint(IPAddress.Parse(address), port));
-            client.StartRecording();
-            _ = client.StartPlayAsync(cts.Token);
+            using var client =
+                new UdpAudioClient(new IPEndPoint(IPAddress.Parse(serverAddress), serverPort));
+            client.StartSending();
             
             Console.WriteLine("Press any key to shutdown...");
             Console.ReadKey();
+            
+            return Task.CompletedTask;
+        }
+
+        [Command("client-player")]
+        public Task StartClientPlayerAsync(
+            [Option(null)] string serverAddress,
+            [Option(null)] int serverPort
+        ) {
+            using var cts = new CancellationTokenSource();
+            using var client =
+                new UdpAudioClient(new IPEndPoint(IPAddress.Parse(serverAddress), serverPort));
+            _ = client.StartPlayingAsync(cts.Token);
+            
+            Console.WriteLine("Press any key to shutdown...");
+            Console.ReadKey();
+
+            cts.Cancel();
+            
+            return Task.CompletedTask;
         }
     }
 }

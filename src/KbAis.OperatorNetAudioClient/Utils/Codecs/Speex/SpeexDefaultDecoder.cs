@@ -23,7 +23,7 @@ namespace KbAis.OperatorNetAudioClient.Utils.Codecs.Speex {
 
             // Copy output buffer to decompressed sample.
             var decompressedSample = new byte[bytesDecoded * 2];
-            Array.Copy(outputBuffer, 0, decompressedSample, 0, bytesDecoded);
+            Buffer.BlockCopy(outputBuffer, 0, decompressedSample, 0, decompressedSample.Length);
 
             return decompressedSample;
         }

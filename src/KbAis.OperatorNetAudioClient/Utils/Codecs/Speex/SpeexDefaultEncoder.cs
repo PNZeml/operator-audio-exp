@@ -25,7 +25,7 @@ namespace KbAis.OperatorNetAudioClient.Utils.Codecs.Speex {
                 .Encode(inputWaveBuffer.ShortBuffer, 0, bytesToEncode, outputBuffer, 0, length);
 
             var encodedSample = new byte[bytesEncoded];
-            Array.Copy(outputBuffer, 0, encodedSample, 0, bytesEncoded);
+            Buffer.BlockCopy(outputBuffer, 0, encodedSample, 0, bytesEncoded);
 
             ShiftLeftoverSamplesDown(bytesToEncode);
 
@@ -33,7 +33,7 @@ namespace KbAis.OperatorNetAudioClient.Utils.Codecs.Speex {
         }
 
         private void FeedSamplesIntoEncoderInputBuffer(byte[] sample, int offset, int length) {
-            Array.Copy(
+            Buffer.BlockCopy(
                 sample,
                 offset,
                 inputWaveBuffer.ByteBuffer,
@@ -45,7 +45,7 @@ namespace KbAis.OperatorNetAudioClient.Utils.Codecs.Speex {
 
         private void ShiftLeftoverSamplesDown(int bytesEncoded) {
             var leftoverSamples = inputWaveBuffer.ShortBufferCount - bytesEncoded;
-            Array.Copy(
+            Buffer.BlockCopy(
                 inputWaveBuffer.ByteBuffer,
                 bytesEncoded * 2,
                 inputWaveBuffer.ByteBuffer,

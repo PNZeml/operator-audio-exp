@@ -11,22 +11,21 @@ namespace KbAis.OperatorNetAudioClient.Features.NetAudioClient {
     public class UdpAudioClient : IAudioClient, IDisposable {
         private readonly UdpClient udpClient;
         private readonly ICodec codec;
-        private WaveInEvent waveIn;
-        private WaveOutEvent waveOut;
-        private BufferedWaveProvider waveProvider;
 
         public UdpAudioClient(IPEndPoint serverEndPoint) {
             udpClient = new UdpClient();
             codec = new SpeexNarrowbandCodec();
 
             udpClient.Connect(serverEndPoint);
+            udpClient.Send(new byte[] { 0x00 }, 1);
         }
 
-        public void StartRecording() {
-            waveIn = new WaveInEvent {
-                DeviceNumber = 0, BufferMilliseconds = 50, WaveFormat = codec.RecordFormat
+        public void StartSending() {
+            using var waveIn = new WaveInEvent {
+                DeviceNumber = 0,
+                BufferMilliseconds = 100,
+                WaveFormat = codec.RecordFormat
             };
-
             waveIn.DataAvailable += (s, e) => {
                 var encodedSample = codec.Encode(e.Buffer, 0, e.BytesRecorded);
                 udpClient.Send(encodedSample, encodedSample.Length);
@@ -34,31 +33,33 @@ namespace KbAis.OperatorNetAudioClient.Features.NetAudioClient {
             waveIn.StartRecording();
         }
 
-        public async Task StartPlayAsync(CancellationToken cancellationToken) {
+        public async Task StartPlayingAsync(CancellationToken cancellationToken) {
             try {
-                waveOut = new WaveOutEvent();
-
-                waveProvider = new BufferedWaveProvider(codec.RecordFormat);
+                using var waveOut = new WasapiOut();
+                var waveProvider = new BufferedWaveProvider(codec.RecordFormat) {
+                    DiscardOnBufferOverflow = true
+                };
                 waveOut.Init(waveProvider);
-            
-                waveOut.Play();
-
+                var durationPlayTimeSpan = TimeSpan.FromMilliseconds(100);
+                
                 while (!cancellationToken.IsCancellationRequested) {
-                    var result = await udpClient.ReceiveAsync();
-                    var encodedSample = result.Buffer;
-                    var decodedSample = codec.Decode(encodedSample, 0, encodedSample.Length);
-
+                    var receiveResult = await udpClient.ReceiveAsync();
+                    var decodedSample =
+                        codec.Decode(receiveResult.Buffer, 0, receiveResult.Buffer.Length);
                     waveProvider.AddSamples(decodedSample, 0, decodedSample.Length);
+
+                    if (waveProvider.BufferedDuration >= durationPlayTimeSpan) {
+                        waveOut.Play();
+                    } else {
+                        waveOut.Stop();
+                    }
                 }
             } catch(Exception exception) {
-                
+                Console.WriteLine(exception);
             }
         }
 
-        public void Dispose() {
-            udpClient?.Dispose();
-            waveIn?.Dispose();
-            waveOut?.Dispose();
-        }
+        public void Dispose() =>
+            udpClient?.Close();
     }
 }
