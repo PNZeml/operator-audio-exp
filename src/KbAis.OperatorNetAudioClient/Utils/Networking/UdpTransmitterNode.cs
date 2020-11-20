@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Buffers;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -9,16 +8,27 @@ using System.Threading.Tasks;
 namespace KbAis.OperatorNetAudioClient.Utils.Networking {
     internal class UdpTransmitterNode : ITransmitterNode {
         public Func<ReadOnlyMemory<byte>, Task> OnDataReceivedHandlerAsync { get; set; }
+        public IPEndPoint NodeEndPoint { get; }
 
         private readonly int bufferSize;
         private readonly Socket socket;
         private CancellationToken cancellationToken;
-        private EndPoint forwardingEndPoint;
+        private IPEndPoint forwardingEndPoint;
 
-        public UdpTransmitterNode(EndPoint endPoint, int bufferSize) {
+        private UdpTransmitterNode(EndPoint endPoint, int bufferSize) {
             this.bufferSize = bufferSize;
             socket = new Socket(endPoint.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
             socket.Bind(endPoint);
+
+            NodeEndPoint = (IPEndPoint)socket.LocalEndPoint;
+        }
+
+        public static UdpTransmitterNode Create(IPAddress nodeAddress, int bufferSize) {
+            const int ANY_FREE_PORT = 0;
+
+            var nodeEndPoint = new IPEndPoint(nodeAddress, ANY_FREE_PORT);
+
+            return new UdpTransmitterNode(nodeEndPoint, bufferSize);
         }
 
         public void LinkNode(ITransmitterNode transmitterNode) {
@@ -31,6 +41,7 @@ namespace KbAis.OperatorNetAudioClient.Utils.Networking {
                 throw new ArgumentNullException(nameof(OnDataReceivedHandlerAsync));
             }
             this.cancellationToken = cancellationToken;
+
             return ReceiveAsync();
         }
 
@@ -40,7 +51,7 @@ namespace KbAis.OperatorNetAudioClient.Utils.Networking {
         }
 
         private async Task ReceiveAsync() {
-            var remoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
+            var anyEndPoint = new IPEndPoint(IPAddress.Any, 0);
 
             var pool = ArrayPool<byte>.Shared;
             var buffer = pool.Rent(bufferSize);
@@ -48,14 +59,16 @@ namespace KbAis.OperatorNetAudioClient.Utils.Networking {
             try {
                 while (!cancellationToken.IsCancellationRequested) {
                     var result =
-                        await socket.ReceiveFromAsync(buffer, SocketFlags.None, remoteEndPoint);
+                        await socket.ReceiveFromAsync(buffer, SocketFlags.None, anyEndPoint);
                     // Check if address to response is defined.
-                    forwardingEndPoint ??= result.RemoteEndPoint;
+                    forwardingEndPoint ??= (IPEndPoint)result.RemoteEndPoint;
                     var message = new ReadOnlyMemory<byte>(buffer, 0, result.ReceivedBytes);
                     await OnDataReceivedHandlerAsync(message);
                 }
-            } catch(Exception exception) {
-                Debug.WriteLine("An exception occured during receiving data in UDP node");
+            } catch (Exception exception) {
+                Console.WriteLine(
+                    $"An exception occured during receiving message in UDP node: {exception}"
+                );
             } finally {
                 pool.Return(buffer, true);
             }
@@ -79,7 +92,9 @@ namespace KbAis.OperatorNetAudioClient.Utils.Networking {
                     message = message.Slice(sentBytes);
                 } while (message.Length > 0 || !cancellationToken.IsCancellationRequested);
             } catch (Exception exception) {
-                Debug.WriteLine("An exception occured during receiving data in UDP node");
+                Console.WriteLine(
+                    $"An exception occured during message forwarding in UDP node: {exception}"
+                );
             }
         }
     }

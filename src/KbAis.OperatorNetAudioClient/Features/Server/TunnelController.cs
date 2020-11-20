@@ -6,40 +6,34 @@ using KbAis.OperatorNetAudioClient.Utils.Networking;
 
 namespace KbAis.OperatorNetAudioClient.Features.Server {
     internal class TunnelController : IDisposable {
-        private CancellationToken CancellationToken => cancellationTokenSource.Token;
+        private readonly CancellationTokenSource cts;
+        private readonly ITransmitterNode nodeA;
+        private readonly ITransmitterNode nodeB;
 
-        private readonly CancellationTokenSource cancellationTokenSource;
-        private readonly UdpTransmitterNode nodeA;
-        private readonly UdpTransmitterNode nodeB;
-
-        public TunnelController(
-            IPEndPoint endPointA,
-            IPEndPoint endPointB,
-            int bufferSize
-        ) {
-            cancellationTokenSource = new CancellationTokenSource();
-            nodeA = new UdpTransmitterNode(endPointA, bufferSize);
-            nodeB = new UdpTransmitterNode(endPointB, bufferSize);
+        public TunnelController(ITransmitterNode nodeA, ITransmitterNode nodeB) {
+            cts = new CancellationTokenSource();
+            this.nodeA = nodeA;
+            this.nodeB = nodeB;
 
             nodeA.LinkNode(nodeB);
             nodeB.LinkNode(nodeA);
 
-            CancellationToken.Register(async () => {
+            cts.Token.Register(async () => {
                 await nodeA.CloseAsync();
                 await nodeB.CloseAsync();
             });
         }
 
         public Task StartAsync() {
-            nodeA.StartAsync(CancellationToken);
-            nodeB.StartAsync(CancellationToken);
+            nodeA.StartAsync(cts.Token);
+            nodeB.StartAsync(cts.Token);
 
             return Task.CompletedTask;
         }
 
         public void Dispose() {
-            cancellationTokenSource?.Cancel();
-            cancellationTokenSource?.Dispose();
+            cts?.Cancel();
+            cts?.Dispose();
         }
     }
 }

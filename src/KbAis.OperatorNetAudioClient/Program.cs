@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ConsoleAppFramework;
 using KbAis.OperatorNetAudioClient.Features.Client;
 using KbAis.OperatorNetAudioClient.Features.Server;
+using KbAis.OperatorNetAudioClient.Utils.Networking;
 using Microsoft.Extensions.Hosting;
 
 namespace KbAis.OperatorNetAudioClient {
@@ -14,18 +15,19 @@ namespace KbAis.OperatorNetAudioClient {
 
         [Command("server")]
         public Task StartServerAsync(
-            [Option(null)] string serverAddress,
-            [Option(null)] int portA,
-            [Option(null)] int portB,
-            [Option(null)] int bufferSize = 4096
+            [Option("a")] string serverAddress,
+            [Option("b")] int bufferSize = 4096
         ) {
-            using var controller = new TunnelController(
-                new IPEndPoint(IPAddress.Parse(serverAddress), portA),
-                new IPEndPoint(IPAddress.Parse(serverAddress), portB),
-                bufferSize
-            );
+            var serverIpAddress = IPAddress.Parse(serverAddress);
+            var nodeA = UdpTransmitterNode.Create(serverIpAddress, bufferSize);
+            var nodeB = UdpTransmitterNode.Create(serverIpAddress, bufferSize);
+
+            using var controller = new TunnelController(nodeA, nodeB);
 
             _ = controller.StartAsync();
+
+            Console.WriteLine($"Node A bound to {nodeA.NodeEndPoint.Port}");
+            Console.WriteLine($"Node B bound to {nodeB.NodeEndPoint.Port}");
 
             Console.WriteLine("Press any key to shutdown...");
             Console.ReadKey();
@@ -35,8 +37,8 @@ namespace KbAis.OperatorNetAudioClient {
 
         [Command("client-sender")]
         public async Task StartClientSenderAsync(
-            [Option(null)] string serverAddress,
-            [Option(null)] int serverPort
+            [Option("a")] string serverAddress,
+            [Option("p")] int serverPort
         ) {
             using var client = new UdpAudioClient();
             await client.LogInAsync(new IPEndPoint(IPAddress.Parse(serverAddress), serverPort));
@@ -48,8 +50,8 @@ namespace KbAis.OperatorNetAudioClient {
 
         [Command("client-player")]
         public async Task StartClientPlayerAsync(
-            [Option(null)] string serverAddress,
-            [Option(null)] int serverPort
+            [Option("a")] string serverAddress,
+            [Option("p")] int serverPort
         ) {
             using var cts = new CancellationTokenSource();
             using var client = new UdpAudioClient();

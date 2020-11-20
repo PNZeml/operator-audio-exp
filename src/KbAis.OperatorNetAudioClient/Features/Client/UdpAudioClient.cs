@@ -16,7 +16,7 @@ namespace KbAis.OperatorNetAudioClient.Features.Client {
 
         public UdpAudioClient() {
             udpClient = new UdpClient();
-            codec = new SpeexNarrowbandCodec();
+            codec = new SpeexUltrawidebandCodec();
         }
 
         public Task LogInAsync(IPEndPoint serverEndPoint) {
@@ -24,15 +24,15 @@ namespace KbAis.OperatorNetAudioClient.Features.Client {
                 udpClient.Connect(serverEndPoint);
 
                 return udpClient.SendAsync(new byte[] {0x00}, 1);
-            } catch(Exception exception) {
-                Console.WriteLine(exception);
-                throw;
+            } catch (Exception exception) {
+                Console.WriteLine($"An exception occured during client log in: {exception}");
+
+                return Task.CompletedTask;
             }
         }
 
         public void StartSending() {
-            try
-            {
+            try {
                 waveIn = new WaveInEvent {
                     DeviceNumber = 0,
                     BufferMilliseconds = 100,
@@ -43,9 +43,8 @@ namespace KbAis.OperatorNetAudioClient.Features.Client {
                     udpClient.Send(encodedSample, encodedSample.Length);
                 };
                 waveIn.StartRecording();
-            } catch(Exception exception) {
-                Console.WriteLine(exception);
-                throw;
+            } catch (Exception exception) {
+                Console.WriteLine($"An exception occured during sending start: {exception}");
             }
         }
 
@@ -70,16 +69,15 @@ namespace KbAis.OperatorNetAudioClient.Features.Client {
                         waveOut.Stop();
                     }
                 }
-            } catch(Exception exception) {
-                Console.WriteLine(exception);
-                throw;
+            } catch (Exception exception) {
+                Console.WriteLine($"An exception occured during playing start: {exception}");
             }
         }
 
         public void Dispose() {
-            udpClient?.Close();
-            waveIn?.Dispose();
+            waveIn?.StopRecording();
             waveOut?.Dispose();
+            udpClient?.Close();
         }
     }
 }
