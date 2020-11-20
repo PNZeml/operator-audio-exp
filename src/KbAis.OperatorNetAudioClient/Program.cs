@@ -3,7 +3,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using ConsoleAppFramework;
-using KbAis.OperatorNetAudioClient.Features.NetAudioClient;
+using KbAis.OperatorNetAudioClient.Features.Client;
 using KbAis.OperatorNetAudioClient.Features.Server;
 using Microsoft.Extensions.Hosting;
 
@@ -34,36 +34,32 @@ namespace KbAis.OperatorNetAudioClient {
         }
 
         [Command("client-sender")]
-        public Task StartClientSenderAsync(
+        public async Task StartClientSenderAsync(
             [Option(null)] string serverAddress,
             [Option(null)] int serverPort
         ) {
-            using var client =
-                new UdpAudioClient(new IPEndPoint(IPAddress.Parse(serverAddress), serverPort));
+            using var client = new UdpAudioClient();
+            await client.LogInAsync(new IPEndPoint(IPAddress.Parse(serverAddress), serverPort));
             client.StartSending();
-            
+
             Console.WriteLine("Press any key to shutdown...");
             Console.ReadKey();
-            
-            return Task.CompletedTask;
         }
 
         [Command("client-player")]
-        public Task StartClientPlayerAsync(
+        public async Task StartClientPlayerAsync(
             [Option(null)] string serverAddress,
             [Option(null)] int serverPort
         ) {
             using var cts = new CancellationTokenSource();
-            using var client =
-                new UdpAudioClient(new IPEndPoint(IPAddress.Parse(serverAddress), serverPort));
+            using var client = new UdpAudioClient();
+            await client.LogInAsync(new IPEndPoint(IPAddress.Parse(serverAddress), serverPort));
             _ = client.StartPlayingAsync(cts.Token);
-            
+
             Console.WriteLine("Press any key to shutdown...");
             Console.ReadKey();
 
             cts.Cancel();
-            
-            return Task.CompletedTask;
         }
     }
 }

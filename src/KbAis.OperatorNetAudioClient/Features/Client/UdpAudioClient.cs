@@ -7,32 +7,46 @@ using KbAis.OperatorNetAudioClient.Utils.Codecs;
 using KbAis.OperatorNetAudioClient.Utils.Codecs.Speex;
 using NAudio.Wave;
 
-namespace KbAis.OperatorNetAudioClient.Features.NetAudioClient {
+namespace KbAis.OperatorNetAudioClient.Features.Client {
     public class UdpAudioClient : IAudioClient, IDisposable {
         private readonly UdpClient udpClient;
         private readonly ICodec codec;
         private IWaveIn waveIn;
         private IWavePlayer waveOut;
 
-        public UdpAudioClient(IPEndPoint serverEndPoint) {
+        public UdpAudioClient() {
             udpClient = new UdpClient();
             codec = new SpeexNarrowbandCodec();
+        }
 
-            udpClient.Connect(serverEndPoint);
-            udpClient.Send(new byte[] { 0x00 }, 1);
+        public Task LogInAsync(IPEndPoint serverEndPoint) {
+            try {
+                udpClient.Connect(serverEndPoint);
+
+                return udpClient.SendAsync(new byte[] {0x00}, 1);
+            } catch(Exception exception) {
+                Console.WriteLine(exception);
+                throw;
+            }
         }
 
         public void StartSending() {
-            waveIn = new WaveInEvent {
-                DeviceNumber = 0,
-                BufferMilliseconds = 100,
-                WaveFormat = codec.RecordFormat
-            };
-            waveIn.DataAvailable += (s, e) => {
-                var encodedSample = codec.Encode(e.Buffer, 0, e.BytesRecorded);
-                udpClient.Send(encodedSample, encodedSample.Length);
-            };
-            waveIn.StartRecording();
+            try
+            {
+                waveIn = new WaveInEvent {
+                    DeviceNumber = 0,
+                    BufferMilliseconds = 100,
+                    WaveFormat = codec.RecordFormat
+                };
+                waveIn.DataAvailable += (s, e) => {
+                    var encodedSample = codec.Encode(e.Buffer, 0, e.BytesRecorded);
+                    udpClient.Send(encodedSample, encodedSample.Length);
+                };
+                waveIn.StartRecording();
+            } catch(Exception exception) {
+                Console.WriteLine(exception);
+                throw;
+            }
         }
 
         public async Task StartPlayingAsync(CancellationToken cancellationToken) {
@@ -43,7 +57,7 @@ namespace KbAis.OperatorNetAudioClient.Features.NetAudioClient {
                 };
                 waveOut.Init(waveProvider);
                 var durationPlayTimeSpan = TimeSpan.FromMilliseconds(100);
-                
+
                 while (!cancellationToken.IsCancellationRequested) {
                     var receiveResult = await udpClient.ReceiveAsync();
                     var decodedSample =
@@ -58,6 +72,7 @@ namespace KbAis.OperatorNetAudioClient.Features.NetAudioClient {
                 }
             } catch(Exception exception) {
                 Console.WriteLine(exception);
+                throw;
             }
         }
 
